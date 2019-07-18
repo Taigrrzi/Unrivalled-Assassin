@@ -19,6 +19,9 @@ public class gameController : MonoBehaviour
     public Object lastSeenPrefab;
     public Object relayedInfoPrefab;
 
+    private int guardID;
+    private int victimID;
+
     public List<GameObject> hearers;
 
     public float spawnDelay;
@@ -45,6 +48,8 @@ public class gameController : MonoBehaviour
     {
         guards = new List<GameObject>();
         victims = new List<GameObject>();
+        guardID = 0;
+        victimID = 0;
         instance = this;
         lastSeensParent = new GameObject("LastSeenPositions").transform;
         guardParent = new GameObject("Guards").transform;
@@ -57,24 +62,11 @@ public class gameController : MonoBehaviour
         spawnTimer = 0;
     }
 
-    public void MakeSound(Vector3 location,string type, string size) {
+    public void MakeSound(Vector3 location,string type, float sizeMod) {
         foreach (GameObject hearer in hearers)
         {
-            if (Vector3.Distance(hearer.transform.position,location)<(hearer.GetComponent<canHearSound>().hearRange*SizeToModifier(size))) {
-                hearer.GetComponent<canHearSound>().HearSound(location,type,size);
-            }
-        }
-        float SizeToModifier(string sSize) {
-            switch (sSize)
-            {
-                case "loud":
-                    return 2;
-                case "normal":
-                    return 1;
-                case "quiet":
-                    return 0.5f;
-                default:
-                    return 1;
+            if (Vector3.Distance(hearer.transform.position,location)<(hearer.GetComponent<canHearSound>().hearRange* sizeMod)) {
+                hearer.GetComponent<canHearSound>().HearSound(location,type,sizeMod);
             }
         }
     }
@@ -151,6 +143,7 @@ public class gameController : MonoBehaviour
                 patrolIndex = Random.Range(0,patrolParent.transform.childCount);
             } while (NotInRange(patrolParent.transform.GetChild(patrolIndex)));
             GameObject newGuard = (GameObject)Instantiate<Object>(guardPrefab,patrolParent.GetChild(patrolIndex).position,Quaternion.identity,guardParent);
+            newGuard.name = "Guard " + guardID++;
             guards.Add(newGuard);
         }
     }
@@ -165,6 +158,7 @@ public class gameController : MonoBehaviour
                 patrolIndex = Random.Range(0, patrolParent.transform.childCount);
             } while (NotInRange(patrolParent.transform.GetChild(patrolIndex)));
             GameObject newVictim = (GameObject)Instantiate<Object>(victimPrefab, patrolParent.GetChild(patrolIndex).position, Quaternion.identity,victimParent);
+            newVictim.name = "Target " + victimID++;
             victims.Add(newVictim);
         }
     }

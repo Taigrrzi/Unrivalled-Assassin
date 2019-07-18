@@ -144,7 +144,10 @@ public class guardController : canHearSound
 
     public void EnterState(string newState) {
         if (aiState != newState) {
-            ExitState(aiState);
+            if (aiState != newState)
+            {
+                ExitState(aiState);
+            }
             switch (newState)
             {
                 case "lookAround":
@@ -168,7 +171,6 @@ public class guardController : canHearSound
 
                     break;
                 case "alarmPatrol":
-                    Destroy(targetLastSeen);
                     aiState = "alarmPatrol";
                     BecomeAlarmed();
                     currentPatrolNode = gameController.instance.NearestPatrolNode(targetLastSeen.transform.position);
@@ -185,6 +187,7 @@ public class guardController : canHearSound
         switch (stateToExit)
         {
             case "seenTarget":
+                Destroy(targetLastSeen);
                 break;
             case "idlePatrol":
                 break;

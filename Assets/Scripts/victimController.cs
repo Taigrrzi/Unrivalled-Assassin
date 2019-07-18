@@ -114,11 +114,15 @@ public class victimController : canHearSound
                 agent.SearchPath();
                 if ((agent.reachedEndOfPath && !agent.pathPending)||Vector3.Distance(transform.position,agent.destination)<1)
                 {
-                    GameObject relayedInfo = gameController.instance.NewRelayedInfo(gameObject);
-                    relayedInfo.transform.parent = gameController.instance.lastSeensParent;
-                    relayedInfo.transform.position = targetLastSeen.transform.position;
-                    gameController.instance.NearestGuard(transform.position).GetComponent<guardController>().targetLastSeen = relayedInfo;
-                    gameController.instance.NearestGuard(transform.position).GetComponent<guardController>().EnterState("seenTarget");
+                    guardController nearestGuard = gameController.instance.NearestGuard(transform.position).GetComponent<guardController>();
+                    if (nearestGuard.aiState != "seenTarget")
+                    {
+                        GameObject relayedInfo = gameController.instance.NewRelayedInfo(gameObject);
+                        relayedInfo.transform.parent = gameController.instance.lastSeensParent;
+                        relayedInfo.transform.position = targetLastSeen.transform.position;
+                        nearestGuard.targetLastSeen = relayedInfo;
+                        nearestGuard.EnterState("seenTarget");
+                    }
                     EnterState("idlePatrol");
                 }
                 break;

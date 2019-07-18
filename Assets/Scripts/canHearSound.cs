@@ -17,7 +17,7 @@ public class canHearSound : MonoBehaviour
         gameController.instance.hearers.Add(gameObject);
     }
 
-    public void HearSound(Vector3 location, string type, string size) {
+    public void HearSound(Vector3 location, string type, float sizeMod) {
 
     }
 }
