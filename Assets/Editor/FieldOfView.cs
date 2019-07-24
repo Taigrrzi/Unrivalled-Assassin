@@ -3,11 +3,12 @@ using System.Collections;
 using UnityEditor;
 
 [CustomEditor(typeof(guardController))]
-public class FieldOfViewEditor : Editor
+public class FieldOfViewEditor : canHearSoundEditor
 {
 
-    void OnSceneGUI()
+    public override void OnSceneGUI()
     {
+        base.OnSceneGUI();
         guardController fow = (guardController)target;
         Handles.color = Color.white;
         Handles.DrawWireArc(fow.transform.position, Vector3.forward, Vector3.up, 360, fow.currentViewRadius);

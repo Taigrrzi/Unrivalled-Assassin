@@ -121,6 +121,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3dfa94721b1dccb458f649450f258c18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hearRange: 5
   viewRadiusIdleMax: 12
   viewRadiusIdleBase: 8
   viewRadiusAlarmMax: 15
@@ -142,7 +143,9 @@ MonoBehaviour:
   alarmSpeed: 5
   idleViewMaterial: {fileID: 2100000, guid: a56ee23b06bdd83499b381fc72999b07, type: 2}
   alarmViewMaterial: {fileID: 2100000, guid: 978c92233daf3ab4ba2d72bf95afc6b5, type: 2}
-  currentPatrolNode: {fileID: 0}
+  currentPatrolNode: 0
+  patrolParent: {fileID: 0}
+  patrolDirection: 0
   targetLastSeen: {fileID: 0}
   targetMask:
     serializedVersion: 2

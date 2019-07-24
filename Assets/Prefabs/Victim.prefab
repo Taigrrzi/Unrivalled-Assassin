@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 8644664976750163651}
   - component: {fileID: 8644664976750163650}
   - component: {fileID: 8644664976750163649}
-  - component: {fileID: 8644664976750163653}
   - component: {fileID: 2632351996663361298}
   - component: {fileID: 973846839654159951}
+  - component: {fileID: -5734513003495271286}
   m_Layer: 9
   m_Name: Victim
   m_TagString: Untagged
@@ -110,52 +110,6 @@ MonoBehaviour:
   bezierTangentLength: 0.4
   offset: 0.2
   factor: 0.1
---- !u!114 &8644664976750163653
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8644664976750163652}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ec99290ab99ffa54d8223ffd20d71d94, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  viewRadiusIdleMax: 9
-  viewRadiusIdleBase: 6
-  viewRadiusAlarmMax: 12
-  viewRadiusAlarmBase: 7
-  currentViewRadius: 0
-  currentViewRadiusBase: 0
-  currentViewRadiusMax: 0
-  viewAngleIdleMax: 115
-  viewAngleIdleBase: 75
-  viewAngleAlarmMax: 130
-  viewAngleAlarmBase: 90
-  currentViewAngle: 0
-  currentViewAngleBase: 0
-  currentViewAngleMax: 0
-  aiState: 
-  alarmGracePeriod: 0.5
-  alarmGraceTimer: 0
-  idleSpeed: 1
-  alarmSpeed: 4
-  idleViewMaterial: {fileID: 2100000, guid: 14d42d6d2b7ffc64d82ffca031789f40, type: 2}
-  alarmViewMaterial: {fileID: 2100000, guid: f90ea66518d3dc04c9620bb0f5b8f9aa, type: 2}
-  currentPatrolNode: {fileID: 0}
-  targetLastSeen: {fileID: 0}
-  targetMask:
-    serializedVersion: 2
-    m_Bits: 1024
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 256
-  visibleTargets: []
-  meshResolution: 1
-  edgeResolveIterations: 4
-  edgeDstThreshold: 0.5
-  viewMeshFilter: {fileID: 8644664976989187990}
 --- !u!58 &2632351996663361298
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -220,6 +174,55 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &-5734513003495271286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8644664976750163652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec99290ab99ffa54d8223ffd20d71d94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hearRange: 0
+  viewRadiusIdleMax: 9
+  viewRadiusIdleBase: 6
+  viewRadiusAlarmMax: 12
+  viewRadiusAlarmBase: 7
+  currentViewRadius: 0
+  currentViewRadiusBase: 0
+  currentViewRadiusMax: 0
+  viewAngleIdleMax: 115
+  viewAngleIdleBase: 75
+  viewAngleAlarmMax: 130
+  viewAngleAlarmBase: 90
+  currentViewAngle: 0
+  currentViewAngleBase: 0
+  currentViewAngleMax: 0
+  aiState: 
+  alarmGracePeriod: 0.5
+  alarmGraceTimer: 0
+  idleSpeed: 1
+  alarmSpeed: 4
+  idleViewMaterial: {fileID: 2100000, guid: 14d42d6d2b7ffc64d82ffca031789f40, type: 2}
+  alarmViewMaterial: {fileID: 2100000, guid: f90ea66518d3dc04c9620bb0f5b8f9aa, type: 2}
+  currentPatrolNode: 0
+  patrolParent: {fileID: 0}
+  targetOfInterest: {fileID: 0}
+  targetOfInterestType: 
+  targetMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 256
+  visibleTargets: []
+  meshResolution: 1
+  edgeResolveIterations: 4
+  edgeDstThreshold: 0.5
+  viewMeshFilter: {fileID: 8644664976989187990}
 --- !u!1 &8644664976989187691
 GameObject:
   m_ObjectHideFlags: 0

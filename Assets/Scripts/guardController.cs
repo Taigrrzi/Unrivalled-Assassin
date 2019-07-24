@@ -41,9 +41,12 @@ public class guardController : canHearSound
     public Material idleViewMaterial;
     public Material alarmViewMaterial;
 
-    public Transform currentPatrolNode;
+    public int currentPatrolNode;
+    public Transform patrolParent;
+    public bool patrolDirection;
 
-    public GameObject targetLastSeen;
+    public GameObject targetOfInterest;
+    public string targetOfInterestType;
 
     public LayerMask targetMask;
     public LayerMask obstacleMask;
@@ -66,6 +69,7 @@ public class guardController : canHearSound
 
     void Start()
     {
+        patrolDirection = (Random.value > 0.5f);
         base.AddToHearers();
         viewMesh = new Mesh();
         viewMesh.name = "View Mesh";
@@ -73,7 +77,7 @@ public class guardController : canHearSound
         StartCoroutine("FindTargetsWithDelay", .2f);
         alarmGraceTimer = 0;
         EnterState("idlePatrol");
-        currentPatrolNode = gameController.instance.RandomPatrolNode();
+        currentPatrolNode = gameController.instance.NearestPatrolNode(transform.position,patrolParent);
     }
 
     void Update()
@@ -84,11 +88,22 @@ public class guardController : canHearSound
             case "seenTarget":
                 if (visibleTargets.Count > 0)
                 {
-                        targetLastSeen.transform.position = visibleTargets[0].transform.position;
+                        targetOfInterest.transform.position = visibleTargets[0].transform.position;
                 }
-                agent.destination = targetLastSeen.transform.position;
+                agent.destination = targetOfInterest.transform.position;
                 agent.SearchPath();
-                if ((agent.reachedEndOfPath && !agent.pathPending)||(Vector2.Distance(transform.position,targetLastSeen.transform.position)<1))
+                if ((agent.reachedEndOfPath && !agent.pathPending)||(Vector2.Distance(transform.position, targetOfInterest.transform.position)<1))
+                {
+                    EnterState("alarmPatrol");
+                }
+                break;
+            case "checkingReport":
+                if (visibleTargets.Count > 0)
+                {
+                    SetNewTargetOfInterest(visibleTargets[0].transform.position, "seenTarget");
+                    EnterState("seenTarget");
+                }
+                if ((agent.reachedEndOfPath && !agent.pathPending) || (Vector2.Distance(transform.position, targetOfInterest.transform.position) < 1))
                 {
                     EnterState("alarmPatrol");
                 }
@@ -115,13 +130,34 @@ public class guardController : canHearSound
 
                 if ((agent.reachedEndOfPath && !agent.pathPending) || (Vector2.Distance(transform.position, agent.destination) < 0.5))
                 {
-                    currentPatrolNode = gameController.instance.RandomPatrolNode();
-                    agent.destination = currentPatrolNode.position;
+                    //currentPatrolNode = gameController.instance.RandomPatrolNode(patrolParent);
+                    gameController.PNodeAndDirection nextData = gameController.instance.NextPatrolNode(currentPatrolNode, patrolParent, patrolDirection);
+                    currentPatrolNode = nextData.node;
+                    patrolDirection = nextData.forwards;
+                    agent.destination = patrolParent.GetComponent<patrolParent>().nodes[currentPatrolNode].position;
                     agent.SearchPath();
                 }
                 if (visibleTargets.Count > 0)
                 {
                     alarmGraceTimer += Time.deltaTime*2;
+                    if (alarmGraceTimer > alarmGracePeriod)
+                    {
+                        EnterState("seenTarget");
+                    }
+                }
+                else
+                {
+                    alarmGraceTimer = 0;
+                }
+                break;
+            case "investigatingSound":
+                if ((agent.reachedEndOfPath && !agent.pathPending) || (Vector2.Distance(transform.position, targetOfInterest.transform.position) < 1))
+                {
+                    EnterState("idlePatrol");
+                }
+                if (visibleTargets.Count > 0)
+                {
+                    alarmGraceTimer += Time.deltaTime * 2;
                     if (alarmGraceTimer > alarmGracePeriod)
                     {
                         EnterState("seenTarget");
@@ -156,28 +192,39 @@ public class guardController : canHearSound
                     break;
                 case "seenTarget":
                     aiState = "seenTarget";
-                    if (targetLastSeen == null)
-                    {
-                        targetLastSeen = gameController.instance.NewLastSeen(gameObject);
-                    }
+                    SetNewTargetOfInterest(visibleTargets[0].position, "seenTarget");
+                    BecomeAlarmed();
+                    break;
+                case "checkingReport":
+                    aiState = "checkingReport";
+                    agent.destination = targetOfInterest.transform.position;
+                    agent.SearchPath();
                     BecomeAlarmed();
                     break;
                 case "idlePatrol":
                     aiState = "idlePatrol";
                     BecomeIdle();
-                    currentPatrolNode = gameController.instance.RandomPatrolNode();
-                    agent.destination = currentPatrolNode.position;
+                    currentPatrolNode = gameController.instance.RandomPatrolNode(patrolParent);
+                    //gameController.PNodeAndDirection nextData = gameController.instance.NextPatrolNode(currentPatrolNode, patrolParent, patrolDirection);
+                    //currentPatrolNode = nextData.node;
+                    //patrolDirection = nextData.forwards;
+                    agent.destination = patrolParent.GetComponent<patrolParent>().nodes[currentPatrolNode].position;
                     agent.SearchPath();
 
                     break;
                 case "alarmPatrol":
                     aiState = "alarmPatrol";
                     BecomeAlarmed();
-                    currentPatrolNode = gameController.instance.NearestPatrolNode(targetLastSeen.transform.position);
-                    agent.destination = currentPatrolNode.position;
+                    currentPatrolNode = gameController.instance.NearestPatrolNode(targetOfInterest.transform.position,patrolParent);
+                    agent.destination = patrolParent.GetComponent<patrolParent>().nodes[currentPatrolNode].position;
+                    agent.SearchPath();
+                    break;
+                case "investigatingSound":
+                    agent.destination = targetOfInterest.transform.position;
                     agent.SearchPath();
                     break;
                 default:
+                    Debug.LogError(name + " entered non existent state!!: " + newState);
                     break;
             }
         }
@@ -187,7 +234,13 @@ public class guardController : canHearSound
         switch (stateToExit)
         {
             case "seenTarget":
-                Destroy(targetLastSeen);
+                LoseTargetOfInterest();
+                break;
+            case "checkingReport":
+                LoseTargetOfInterest();
+                break;
+            case "investigatingSound":
+                LoseTargetOfInterest();
                 break;
             case "idlePatrol":
                 break;
@@ -264,6 +317,60 @@ public class guardController : canHearSound
         currentViewAngleMax = viewAngleIdleMax;
         agent.maxSpeed = idleSpeed;
         transform.GetChild(0).GetComponent<MeshRenderer>().material = idleViewMaterial;
+    }
+
+    public override void HearSound(Vector3 location,GameObject creator,string type, float sizeMod)
+    {
+        switch (type)
+        {
+            case "noticeableSound":
+                Debug.Log(name + " heard a " + type + " from " + creator.name);
+                 if (SetNewTargetOfInterest(location, type))
+                {
+                    EnterState("investigatingSound");
+                }
+                break;
+            default:
+                Debug.LogError(name + " heard a sound with an unknown type");
+                break;
+        }
+    }
+
+    public bool SetNewTargetOfInterest(Vector3 location,string type) {
+        if (InterestPriorityFromType(type) < InterestPriorityFromType(targetOfInterestType))
+        {
+            targetOfInterest = gameController.instance.UpdateAITarget(targetOfInterest, gameObject, type);
+            targetOfInterest.transform.position = location;
+            targetOfInterestType = type;
+            return true;
+        } else
+        {
+            return false;
+        }
+    }
+
+    public void LoseTargetOfInterest()
+    {
+        Destroy(targetOfInterest);
+        targetOfInterestType = "";
+    }
+
+    public int InterestPriorityFromType(string type)
+    {
+        switch (type)
+        {
+            case "seenTarget":
+                return 2;
+            case "relayedInfo":
+                return 5;
+            case "alarmingSound":
+                return 8;
+            case "noticeableSound":
+                return 12;
+            default:
+                //Debug.LogError(name + " requested interest priority with unknown type: " + type);
+                return 1000;
+        }
     }
 
     void FindVisibleTargets()

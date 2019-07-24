@@ -5,14 +5,14 @@ using UnityEngine;
 public class gameController : MonoBehaviour
 {
     public static gameController instance;
-    public Transform patrolParent;
+    public List<Transform> patrolParents;
     public Transform guardParent;
     public Transform victimParent;
     public List<GameObject> guards;
     public List<GameObject> victims;
     public List<GameObject> players;
     public List<Transform> patrolNodes;
-    public Transform lastSeensParent;
+    public Transform AITargetsParent;
     public List<AvoidObjects> objectsToAvoid;
     public Object guardPrefab;
     public Object victimPrefab;
@@ -37,12 +37,12 @@ public class gameController : MonoBehaviour
 
     private void Awake()
     {
-        patrolNodes = new List<Transform>();
-        hearers = new List<GameObject>();
-        for (int i = 0; i < patrolParent.transform.childCount; i++)
+        foreach (Transform pParent in patrolParents)
         {
-            patrolNodes.Add(patrolParent.GetChild(i));
+            pParent.GetComponent<patrolParent>().UpdateNodeList();
         }
+
+        hearers = new List<GameObject>();
     }
     void Start()
     {
@@ -51,7 +51,7 @@ public class gameController : MonoBehaviour
         guardID = 0;
         victimID = 0;
         instance = this;
-        lastSeensParent = new GameObject("LastSeenPositions").transform;
+        AITargetsParent = new GameObject("AI Targets").transform;
         guardParent = new GameObject("Guards").transform;
         victimParent = new GameObject("Victims").transform;
         objectsToAvoid = new List<AvoidObjects>();
@@ -62,11 +62,11 @@ public class gameController : MonoBehaviour
         spawnTimer = 0;
     }
 
-    public void MakeSound(Vector3 location,string type, float sizeMod) {
+    public void MakeSound(Vector3 location, GameObject creator, string type, float sizeMod) {
         foreach (GameObject hearer in hearers)
         {
             if (Vector3.Distance(hearer.transform.position,location)<(hearer.GetComponent<canHearSound>().hearRange* sizeMod)) {
-                hearer.GetComponent<canHearSound>().HearSound(location,type,sizeMod);
+                hearer.GetComponent<canHearSound>().HearSound(location,creator,type,sizeMod);
             }
         }
     }
@@ -76,14 +76,56 @@ public class gameController : MonoBehaviour
         spawnTimer += Time.deltaTime;
         if (spawnTimer > spawnDelay && !spawned) {
             spawned = true;
-            SpawnGuards();
-            SpawnVictims();
+            foreach (Transform pParent in patrolParents)
+            {
+                SpawnGuardsOnPatrol(pParent);
+                SpawnVictimsOnPatrol(pParent);
+            }
         }
     }
 
-    public Transform RandomPatrolNode() {
-        int rand = Random.Range(0, patrolNodes.Count);
-        return (patrolNodes[rand]);
+    public int RandomPatrolNode(Transform pParent) {
+        int rand = Random.Range(0, pParent.GetComponent<patrolParent>().nodes.Count);
+        return rand;
+    }
+
+    public PNodeAndDirection NextPatrolNode(int currentNode,Transform pParent, bool forwards)
+    {
+        int boolToInt;
+        if (forwards)
+        {
+            boolToInt = 1;
+        }
+        else
+        {
+            boolToInt = -1;
+        }
+        if (pParent.GetComponent<patrolParent>().loop)
+        {
+
+            return new PNodeAndDirection((int)Mathf.Repeat(currentNode + boolToInt,pParent.GetComponent<patrolParent>().nodes.Count), forwards);
+        }
+        else
+        {
+            if (currentNode == 0 || currentNode == pParent.GetComponent<patrolParent>().nodes.Count - 1)
+            {
+                return new PNodeAndDirection((int)Mathf.Repeat(currentNode - boolToInt, pParent.GetComponent<patrolParent>().nodes.Count), !forwards);
+            }
+            else
+            {
+                return new PNodeAndDirection(currentNode+boolToInt, forwards);
+            }
+        }
+    }
+
+    public struct PNodeAndDirection
+    {
+        public PNodeAndDirection(int node,bool forwards) {
+            this.node = node;
+            this.forwards = forwards;
+        }
+        public int node;
+        public bool forwards;
     }
 
     public Transform NearestPlayer(Vector3 pos)
@@ -102,53 +144,87 @@ public class gameController : MonoBehaviour
         return minPlayer;
     }
 
-    public Transform NearestPatrolNode(Vector3 pos)
+    public int NearestPatrolNode(Vector3 pos, Transform pParent)
     {
         float minDist = float.PositiveInfinity;
-        Transform minPNode = null;
-        foreach (Transform pNode in patrolNodes)
+        int minPNode = -1;
+        for (int i = 0; i < pParent.childCount; i++)
         {
-            float currentDist = Vector3.Distance(pos, pNode.transform.position);
+            float currentDist = Vector3.Distance(pos, pParent.GetChild(i).position);
             if (currentDist < minDist)
             {
-                minPNode = pNode;
+                minPNode = i;
                 minDist = currentDist;
             }
         }
         return minPNode;
     }
 
-    public GameObject NewLastSeen(GameObject creator) {
-        GameObject newLS = (GameObject)Instantiate<Object>(lastSeenPrefab);
-        newLS.name = "LastSeen: " + creator.name;
-        newLS.transform.SetParent(lastSeensParent);
-        return newLS;
+    public GameObject NewAITarget(GameObject creator, string type)
+    {
+        return UpdateAITarget(null, creator,type);
     }
 
-    public GameObject NewRelayedInfo(GameObject creator)
-    {
-        GameObject newRI = (GameObject)Instantiate<Object>(relayedInfoPrefab);
-        newRI.name = "RelayedInfo: " + creator.name;
-        newRI.transform.SetParent(lastSeensParent);
-        return newRI;
+    public GameObject UpdateAITarget(GameObject newTarget, GameObject creator, string type) {
+        if (newTarget) {
+            Destroy(newTarget);
+        }
+        switch (type)
+        {
+            case "noticeableSound":
+                newTarget = (GameObject)Instantiate<Object>(relayedInfoPrefab);
+                newTarget.name = "InvestigatingSound: " + creator.name;
+                newTarget.transform.SetParent(AITargetsParent);
+                return newTarget;
+            case "relayedInfo":
+                newTarget = (GameObject)Instantiate<Object>(relayedInfoPrefab);
+                newTarget.name = "RelayedInfo: " + creator.name;
+                newTarget.transform.SetParent(AITargetsParent);
+                return newTarget;
+            case "seenTarget":
+                newTarget = (GameObject)Instantiate<Object>(lastSeenPrefab);
+                newTarget.name = "Last Seen: " + creator.name;
+                newTarget.transform.SetParent(AITargetsParent);
+                return newTarget;
+            default:
+                newTarget = (GameObject)Instantiate<Object>(lastSeenPrefab);
+                newTarget.name = "UNKNOWNTARGETTYPE " + type + ": " + creator.name;
+                return newTarget;
+        }
     }
 
-    public void SpawnGuards()
+    public void SpawnGuardsOnPatrol(Transform pParent)
     {
-        for (int i = 0; i < initialGuardAmount; i++)
+        for (int i = 0; i < pParent.GetComponent<patrolParent>().randomGuardAmount; i++)
         {
             int patrolIndex;
             do
             {
-                patrolIndex = Random.Range(0,patrolParent.transform.childCount);
-            } while (NotInRange(patrolParent.transform.GetChild(patrolIndex)));
-            GameObject newGuard = (GameObject)Instantiate<Object>(guardPrefab,patrolParent.GetChild(patrolIndex).position,Quaternion.identity,guardParent);
+                patrolIndex = Random.Range(0, pParent.transform.childCount);
+            } while (NotInRange(pParent.transform.GetChild(patrolIndex)));
+            GameObject newGuard = (GameObject)Instantiate<Object>(guardPrefab, pParent.GetChild(patrolIndex).position,Quaternion.identity,guardParent);
             newGuard.name = "Guard " + guardID++;
+            newGuard.GetComponent<guardController>().patrolParent = pParent;
             guards.Add(newGuard);
         }
     }
+    public void SpawnVictimsOnPatrol(Transform pParent)
+    {
+        for (int i = 0; i < pParent.GetComponent<patrolParent>().randomVictimAmount; i++)
+        {
+            int patrolIndex;
+            do
+            {
+                patrolIndex = Random.Range(0, pParent.transform.childCount);
+            } while (NotInRange(pParent.transform.GetChild(patrolIndex)));
+            GameObject newVictim = (GameObject)Instantiate<Object>(victimPrefab, pParent.GetChild(patrolIndex).position, Quaternion.identity, victimParent);
+            newVictim.name = "Target " + victimID++;
+            victims.Add(newVictim);
+            newVictim.GetComponent<victimController>().patrolParent = pParent;
+        }
+    }
 
-    public void SpawnVictims()
+    /*public void SpawnVictims()
     {
         for (int i = 0; i < initialVictimAmount; i++)
         {
@@ -161,7 +237,7 @@ public class gameController : MonoBehaviour
             newVictim.name = "Target " + victimID++;
             victims.Add(newVictim);
         }
-    }
+    }*/
 
     public bool NotInRange(Transform point) {
         bool ret = false;
@@ -172,7 +248,7 @@ public class gameController : MonoBehaviour
             }
         }
         return ret;
-    }//test
+    }
 
     public GameObject  NearestGuard(Vector3 pos) {
         float minDist = float.PositiveInfinity;
@@ -190,9 +266,12 @@ public class gameController : MonoBehaviour
     }
 
     public void RenamePatrolNodes() {
-        for (int i = 0; i < patrolParent.transform.childCount; i++)
+        foreach (Transform pParent in patrolParents)
         {
-            patrolParent.GetChild(i).name = "Patrol Node " + i;
+            for (int i = 0; i < pParent.childCount; i++)
+            {
+                pParent.GetChild(i).name = "Patrol Node " + i;
+            }
         }
     }
 

@@ -4,15 +4,18 @@ using UnityEngine;
 
 public class patrolParent : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public int patrolID;
+    public int randomGuardAmount;
+    public int randomVictimAmount;
+    public Color color = Color.green;
+    public bool loop;
+    public List<Transform> nodes;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+    public void UpdateNodeList() {
+        nodes = new List<Transform>();
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            nodes.Add(transform.GetChild(i));
+        }
     }
 }

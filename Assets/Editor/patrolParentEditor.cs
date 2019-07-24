@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEditor;
 using System.Collections.Generic;
 
+//[CanEditMultipleObjects]
 [CustomEditor(typeof(patrolParent))]
 public class patrolParentEditor : Editor
 {
@@ -10,7 +11,7 @@ public class patrolParentEditor : Editor
     void OnSceneGUI()
     {
         Transform parent = ((patrolParent)target).transform;
-        Handles.color = Color.green;
+        Handles.color = parent.GetComponent<patrolParent>().color;
 
         for (int i = 0; i < parent.childCount-1; i++)
         {
@@ -20,6 +21,10 @@ public class patrolParentEditor : Editor
         if (parent.childCount > 0)
         {
             Handles.DrawSolidDisc(parent.GetChild(parent.childCount - 1).position, Vector3.forward, 0.5f);
+            if (parent.GetComponent<patrolParent>().loop)
+            {
+                Handles.DrawLine(parent.GetChild(0).position, parent.GetChild(parent.childCount-1).position);
+            }
         }
         HandleKeyboard(parent);
     }
@@ -34,10 +39,16 @@ public class patrolParentEditor : Editor
         switch (current.keyCode)
         {
             case KeyCode.P:
-                GameObject newNode = new GameObject("Patrol Node "+parent.childCount);
                 Vector2 mousePos = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition).origin;
-                newNode.transform.position = new Vector3(mousePos.x, mousePos.y, 0);
-                newNode.transform.parent = parent;
+                if (parent.childCount>1&&Vector2.Distance(mousePos,parent.GetChild(0).position)<1)
+                {
+                    parent.GetComponent<patrolParent>().loop = !parent.GetComponent<patrolParent>().loop;
+                } else
+                {
+                    GameObject newNode = new GameObject("Patrol Node " + parent.childCount);
+                    newNode.transform.position = new Vector3(mousePos.x, mousePos.y, 0);
+                    newNode.transform.parent = parent;
+                }
                 break;
             case KeyCode.L:
                 if (parent.childCount>0)

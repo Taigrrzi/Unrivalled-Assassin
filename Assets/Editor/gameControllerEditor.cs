@@ -15,10 +15,5 @@ public class gameControllerEditor : Editor
         {
             myScript.RenamePatrolNodes();
         }
-        myScript.patrolNodes = new List<Transform>();
-        for (int i = 0; i < myScript.patrolParent.transform.childCount; i++)
-        {
-            myScript.patrolNodes.Add(myScript.patrolParent.GetChild(i));
-        }
     }
 }

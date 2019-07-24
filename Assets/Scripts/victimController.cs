@@ -41,9 +41,11 @@ public class victimController : canHearSound
     public Material idleViewMaterial;
     public Material alarmViewMaterial;
 
-    public Transform currentPatrolNode;
+    public int currentPatrolNode;
+    public Transform patrolParent;
 
-    public GameObject targetLastSeen;
+    public GameObject targetOfInterest;
+    public string targetOfInterestType;
 
     public LayerMask targetMask;
     public LayerMask obstacleMask;
@@ -73,7 +75,7 @@ public class victimController : canHearSound
         StartCoroutine("FindTargetsWithDelay", .2f);
         alarmGraceTimer = 0;
         EnterState("idlePatrol");
-        currentPatrolNode = gameController.instance.RandomPatrolNode();
+        currentPatrolNode = gameController.instance.RandomPatrolNode(patrolParent);
         //Camera.main.GetComponent<cameraFollow>().targets.Add(gameObject);
     }
 
@@ -85,7 +87,7 @@ public class victimController : canHearSound
             case "seenTarget":
                 if (visibleTargets.Count > 0)
                 {
-                    targetLastSeen.transform.position = visibleTargets[0].transform.position;
+                    targetOfInterest.transform.position = visibleTargets[0].transform.position;
                 }
                 break;
             case "idlePatrol":
@@ -117,13 +119,14 @@ public class victimController : canHearSound
                     guardController nearestGuard = gameController.instance.NearestGuard(transform.position).GetComponent<guardController>();
                     if (nearestGuard.aiState != "seenTarget")
                     {
-                        GameObject relayedInfo = gameController.instance.NewRelayedInfo(gameObject);
-                        relayedInfo.transform.parent = gameController.instance.lastSeensParent;
-                        relayedInfo.transform.position = targetLastSeen.transform.position;
-                        nearestGuard.targetLastSeen = relayedInfo;
-                        nearestGuard.EnterState("seenTarget");
+                        nearestGuard.SetNewTargetOfInterest(targetOfInterest.transform.position,"relayedInfo");
+                        nearestGuard.EnterState("checkingReport");
                     }
                     EnterState("idlePatrol");
+                }
+                if (visibleTargets.Count>0)
+                {
+                    EnterState("seenTarget");
                 }
                 break;
         }
@@ -147,19 +150,15 @@ public class victimController : canHearSound
                     break;
                 case "seenTarget":
                     aiState = "seenTarget";
-                    if (targetLastSeen == null)
-                    {
-                        targetLastSeen = gameController.instance.NewLastSeen(gameObject);
-                    }
-                    targetLastSeen.transform.position = visibleTargets[0].transform.position;
+                    SetNewTargetOfInterest(visibleTargets[0].position, "seenTarget");
                     BecomeAlarmed();
                     EnterState("reporting");
                     break;
                 case "idlePatrol":
                     aiState = "idlePatrol";
                     BecomeIdle();
-                    currentPatrolNode = gameController.instance.RandomPatrolNode();
-                    agent.destination = currentPatrolNode.position;
+                    currentPatrolNode = gameController.instance.RandomPatrolNode(patrolParent);
+                    agent.destination = patrolParent.GetComponent<patrolParent>().nodes[currentPatrolNode].position;
                     agent.SearchPath();
 
                     break;
@@ -178,7 +177,7 @@ public class victimController : canHearSound
         switch (stateToExit)
         {
             case "reporting":
-                Destroy(targetLastSeen);
+                LoseTargetOfInterest();
                 break;
             case "idlePatrol":
                 break;
@@ -276,6 +275,43 @@ public class victimController : canHearSound
                     visibleTargets.Add(target);
                 }
             }
+        }
+    }
+
+    public bool SetNewTargetOfInterest(Vector3 location, string type)
+    {
+        if (InterestPriorityFromType(type) <= InterestPriorityFromType(targetOfInterestType))
+        {
+            targetOfInterest = gameController.instance.UpdateAITarget(targetOfInterest, gameObject, type);
+            targetOfInterest.transform.position = location;
+            targetOfInterestType = type;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public void LoseTargetOfInterest()
+    {
+        Destroy(targetOfInterest);
+        targetOfInterestType = "";
+    }
+
+    public int InterestPriorityFromType(string type)
+    {
+        switch (type)
+        {
+            case "seenTarget":
+                return 2;
+            case "alarmingSound":
+                return 8;
+            case "noticableSound":
+                return 12;
+            default:
+                //Debug.LogError(name + " requested interest priority with unknown type: " + type);
+                return 1000;
         }
     }
 
